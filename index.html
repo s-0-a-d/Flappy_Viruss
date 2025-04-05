@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flappy Bird HTML - Tiếng Việt</title>
+    <link rel="icon" href="https://raw.githubusercontent.com/s-0-a-d/Flappy_Viruss/refs/heads/main/IMG_20250405_134128.png" type="image/x-icon">
+    <style
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #87CEEB;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            font-family: Arial, sans-serif;
+        }
+        #gameCanvas {
+            display: block;
+        }
+        #restartButton {
+            display: none;
+            position: absolute;
+            padding: 10px 20px;
+            font-size: 20px;
+            background-color: #FF4500;
+            color: white;
+            border: none;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+        #restartButton:hover {
+            background-color: #FF6347;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="gameCanvas"></canvas>
+    <button id="restartButton">Chơi lại</button>
+
+    <script>
+        const canvas = document.getElementById("gameCanvas");
+        const ctx = canvas.getContext("2d");
+        const restartButton = document.getElementById("restartButton");
+
+        canvas.width = 400;
+        canvas.height = 600;
+
+        const birdImg = new Image();
+        birdImg.src = "https://raw.githubusercontent.com/s-0-a-d/Flappy_Viruss/refs/heads/main/IMG_20250405_134128.png";
+
+        let bird = {
+            x: 50,
+            y: 300,
+            width: 40,
+            height: 40,
+            velocity: 0,
+            gravity: 0.5,
+            jump: -8,
+            hitboxPadding: 5
+        };
+        let pipes = [];
+        let pipeWidth = 50;
+        let pipeGap = 150; // Khoảng cách giữa cột trên và dưới
+        let pipeSpeed = 2;
+        let score = 0;
+        let gameOver = false;
+        let globalHighScore = localStorage.getItem("globalHighScore") ? parseInt(localStorage.getItem("globalHighScore")) : 0;
+        let pipeSpawnInterval = 2500; // Thời gian giữa các cột (2.5 giây)
+
+        function spawnPipe() {
+            // Đảm bảo khoảng trống hợp lý
+            let minHeight = 100; // Chiều cao tối thiểu của cột trên
+            let maxHeight = canvas.height - pipeGap - minHeight; // Chiều cao tối đa của cột trên
+            let pipeHeight = Math.floor(Math.random() * (maxHeight - minHeight) + minHeight);
+
+            pipes.push({
+                x: canvas.width,
+                topHeight: pipeHeight,
+                bottomHeight: canvas.height - pipeHeight - pipeGap,
+                passed: false
+            });
+        }
+
+        function drawPipes() {
+            ctx.fillStyle = "#228B22";
+            for (let i = pipes.length - 1; i >= 0; i--) {
+                let pipe = pipes[i];
+                ctx.fillRect(pipe.x, 0, pipeWidth, pipe.topHeight);
+                ctx.fillRect(pipe.x, canvas.height - pipe.bottomHeight, pipeWidth, pipe.bottomHeight);
+
+                pipe.x -= pipeSpeed;
+
+                if (pipe.x + pipeWidth < 0) {
+                    pipes.splice(i, 1);
+                }
+
+                if (!pipe.passed && pipe.x + pipeWidth < bird.x) {
+                    score++;
+                    pipe.passed = true;
+                }
+            }
+        }
+
+        function drawBird() {
+            ctx.drawImage(birdImg, bird.x, bird.y, bird.width, bird.height);
+        }
+
+        function updateBird() {
+            bird.velocity += bird.gravity;
+            bird.y += bird.velocity;
+
+            if (bird.y + bird.height > canvas.height) {
+                bird.y = canvas.height - bird.height;
+                bird.velocity = 0;
+                gameOver = true;
+            }
+            if (bird.y < 0) {
+                bird.y = 0;
+                bird.velocity = 0;
+            }
+        }
+
+        function checkCollision() {
+            for (let pipe of pipes) {
+                let birdHitbox = {
+                    x: bird.x + bird.hitboxPadding,
+                    y: bird.y + bird.hitboxPadding,
+                    width: bird.width - 2 * bird.hitboxPadding,
+                    height: bird.height - 2 * bird.hitboxPadding
+                };
+
+                if (
+                    birdHitbox.x + birdHitbox.width > pipe.x &&
+                    birdHitbox.x < pipe.x + pipeWidth &&
+                    (birdHitbox.y < pipe.topHeight || birdHitbox.y + birdHitbox.height > canvas.height - pipe.bottomHeight)
+                ) {
+                    gameOver = true;
+                }
+            }
+        }
+
+        function drawScore() {
+            ctx.fillStyle = "black";
+            ctx.font = "20px Arial";
+            ctx.fillText("Điểm: " + score, 10, 30);
+            ctx.fillText("Kỷ lục toàn cầu: " + globalHighScore, 10, 60);
+        }
+
+        function resetGame() {
+            bird.y = 300;
+            bird.velocity = 0;
+            pipes = [];
+            if (score > globalHighScore) {
+                globalHighScore = score;
+                localStorage.setItem("globalHighScore", globalHighScore);
+            }
+            score = 0;
+            gameOver = false;
+            restartButton.style.display = "none";
+            spawnPipe();
+            gameLoop(0);
+        }
+
+        document.addEventListener("click", function() {
+            if (!gameOver) {
+                bird.velocity = bird.jump;
+            }
+        });
+
+        restartButton.addEventListener("click", resetGame);
+
+        birdImg.onload = function() {
+            console.log("Ảnh đã tải thành công!");
+            gameLoop(0);
+        };
+        birdImg.onerror = function() {
+            console.error("Lỗi khi tải ảnh!");
+            ctx.fillStyle = "red";
+            ctx.font = "20px Arial";
+            ctx.fillText("Không tải được ảnh!", 50, canvas.height / 2);
+        };
+
+        let lastPipeTime = 0;
+        function gameLoop(timestamp) {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Chỉ sinh cột mới khi đủ khoảng cách thời gian và cột cuối cùng đã di chuyển đủ xa
+            if (timestamp - lastPipeTime > pipeSpawnInterval && (pipes.length === 0 || pipes[pipes.length - 1].x < canvas.width - 200)) {
+                spawnPipe();
+                lastPipeTime = timestamp;
+            }
+
+            drawPipes();
+            drawBird();
+            updateBird();
+            checkCollision();
+            drawScore();
+
+            if (!gameOver) {
+                requestAnimationFrame(gameLoop);
+            } else {
+                ctx.fillStyle = "red";
+                ctx.font = "40px Arial";
+                ctx.fillText("Thua rồi!", canvas.width / 2 - 80, canvas.height / 2 - 20);
+                restartButton.style.display = "block";
+                restartButton.style.left = (canvas.width / 2 - 50) + "px";
+                restartButton.style.top = (canvas.height / 2 + 30) + "px";
+            }
+        }
+
+        spawnPipe();
+    </script>
+</body>
+</html>
