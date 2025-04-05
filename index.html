@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Flappy Bird HTML - Tiếng Việt</title>
+    <title>Flappy Viruss</title>
     <link rel="icon" href="https://raw.githubusercontent.com/s-0-a-d/Flappy_Viruss/refs/heads/main/IMG_20250405_134128.png" type="image/x-icon">
-    <style
+    <style>
         body {
             margin: 0;
             overflow: hidden;
@@ -18,6 +18,7 @@
         }
         #gameCanvas {
             display: block;
+            image-rendering: pixelated; /* Giữ độ nét cho ảnh */
         }
         #restartButton {
             display: none;
@@ -44,6 +45,7 @@
         const ctx = canvas.getContext("2d");
         const restartButton = document.getElementById("restartButton");
 
+        // Quay lại kích thước ban đầu để sửa lỗi
         canvas.width = 400;
         canvas.height = 600;
 
@@ -62,17 +64,16 @@
         };
         let pipes = [];
         let pipeWidth = 50;
-        let pipeGap = 150; // Khoảng cách giữa cột trên và dưới
+        let pipeGap = 150;
         let pipeSpeed = 2;
         let score = 0;
         let gameOver = false;
         let globalHighScore = localStorage.getItem("globalHighScore") ? parseInt(localStorage.getItem("globalHighScore")) : 0;
-        let pipeSpawnInterval = 2500; // Thời gian giữa các cột (2.5 giây)
+        let pipeSpawnInterval = 2500;
 
         function spawnPipe() {
-            // Đảm bảo khoảng trống hợp lý
-            let minHeight = 100; // Chiều cao tối thiểu của cột trên
-            let maxHeight = canvas.height - pipeGap - minHeight; // Chiều cao tối đa của cột trên
+            let minHeight = 100;
+            let maxHeight = canvas.height - pipeGap - minHeight;
             let pipeHeight = Math.floor(Math.random() * (maxHeight - minHeight) + minHeight);
 
             pipes.push({
@@ -144,8 +145,15 @@
         function drawScore() {
             ctx.fillStyle = "black";
             ctx.font = "20px Arial";
-            ctx.fillText("Điểm: " + score, 10, 30);
-            ctx.fillText("Kỷ lục toàn cầu: " + globalHighScore, 10, 60);
+            ctx.fillText("Điểm: " + score, 20, 40);
+            ctx.fillText("Kỷ lục toàn cầu: " + globalHighScore, 20, 70);
+
+            // Chữ nhỏ ở góc dưới bên phải, dịch vào trong
+            ctx.font = "12px Arial";
+            ctx.textAlign = "right";
+            ctx.fillText("Bản Thử Nghiệm", canvas.width - 20, canvas.height - 30);
+            ctx.fillText("Lập trình viên: Thanh", canvas.width - 20, canvas.height - 10);
+            ctx.textAlign = "left";
         }
 
         function resetGame() {
@@ -160,7 +168,7 @@
             gameOver = false;
             restartButton.style.display = "none";
             spawnPipe();
-            gameLoop(0);
+            requestAnimationFrame(gameLoop);
         }
 
         document.addEventListener("click", function() {
@@ -173,7 +181,7 @@
 
         birdImg.onload = function() {
             console.log("Ảnh đã tải thành công!");
-            gameLoop(0);
+            requestAnimationFrame(gameLoop);
         };
         birdImg.onerror = function() {
             console.error("Lỗi khi tải ảnh!");
@@ -186,7 +194,6 @@
         function gameLoop(timestamp) {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-            // Chỉ sinh cột mới khi đủ khoảng cách thời gian và cột cuối cùng đã di chuyển đủ xa
             if (timestamp - lastPipeTime > pipeSpawnInterval && (pipes.length === 0 || pipes[pipes.length - 1].x < canvas.width - 200)) {
                 spawnPipe();
                 lastPipeTime = timestamp;
